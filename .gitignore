@@ -1,5 +1,2 @@
-node_modules/
-.env
-dist/
-.DS_Store
-*.log
+git add .gitignore
+git rebase --continue
