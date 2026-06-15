@@ -1,0 +1,80 @@
+.column {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+  background: var(--bg-kanban-column);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-base);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-default);
+}
+
+.titleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+}
+
+.statusDot.todo {
+  background: var(--color-info);
+}
+
+.statusDot.inprogress {
+  background: var(--color-warning);
+}
+
+.statusDot.completed {
+  background: var(--color-success);
+}
+
+.title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.count {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--bg-badge);
+  color: white;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.cardList.draggingOver {
+  background: rgba(124, 58, 237, 0.06);
+}
