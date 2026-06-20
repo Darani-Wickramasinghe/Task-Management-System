@@ -21,6 +21,7 @@ model User {
   tasks_created Task[]           @relation("CreatedBy")
   assignments   TaskAssignment[]
   comments      Comment[]
+  attachments   Attachment[]
 }
 
 enum Role {
@@ -43,6 +44,7 @@ model Task {
   creator     User             @relation("CreatedBy", fields: [created_by], references: [id])
   assignments TaskAssignment[]
   comments    Comment[]
+  attachments Attachment[]
 }
 
 enum Status {
@@ -85,4 +87,18 @@ model Notification {
   message    String
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  task_id    String
+  user_id    String
+  file_name  String
+  file_path  String
+  file_type  String
+  file_size  Int
+  created_at DateTime @default(now())
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 }

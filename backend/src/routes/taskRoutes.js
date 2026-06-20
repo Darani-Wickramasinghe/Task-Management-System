@@ -10,8 +10,12 @@ import {
   updateTaskStatus,
   assignTask,
   addComment,
-  getComments
+  getComments,
+  addAttachment,
+  getAttachments,
+  deleteAttachment
 } from '../controllers/taskController.js';
+import { upload } from '../config/multerConfig.js';
 
 const router = express.Router();
 
@@ -28,5 +32,8 @@ router.patch('/:id/status', updateTaskStatus);
 router.post('/:id/assign', authorize('project_manager', 'admin'), assignTask);
 router.post('/:id/comments', addComment);
 router.get('/:id/comments', getComments);
+router.post('/:id/attachments', upload.single('file'), addAttachment);
+router.get('/:id/attachments', getAttachments);
+router.delete('/:id/attachments/:attachmentId', deleteAttachment);
 
 export default router;

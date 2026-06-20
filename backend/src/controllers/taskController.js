@@ -1,4 +1,4 @@
-
+import fs from 'fs';
 import { prisma } from '../config/prisma.js';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
 import { broadcastTaskCreated, broadcastTaskUpdated, broadcastTaskDeleted } from '../sockets/emitEvents.js';
@@ -380,6 +380,179 @@ export const getComments = async (req, res) => {
       orderBy: { created_at: 'asc' },
     });
     res.json(comments);
+  } catch (error) {
+    res.status(500).json({ errorCode: 'SERVER_ERROR', message: error.message });
+  }
+};
+
+// POST /api/tasks/:id/attachments - Add attachment
+export const addAttachment = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        errorCode: 'VALIDATION_ERROR',
+        message: 'No file uploaded',
+      });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id },
+      include: { assignments: true },
+    });
+
+    if (!task) {
+      // Remove uploaded file if task is not found
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(404).json({
+        errorCode: 'NOT_FOUND',
+        message: 'Task not found',
+      });
+    }
+
+    // Role check: Collaborators can only upload attachments to tasks they are assigned to
+    if (req.user.role === 'collaborator') {
+      const isAssigned = task.assignments.some(a => a.user_id === req.user.userId);
+      if (!isAssigned) {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(403).json({
+          errorCode: 'FORBIDDEN',
+          message: 'You can only upload attachments to tasks assigned to you',
+        });
+      }
+    }
+
+    const attachment = await prisma.attachment.create({
+      data: {
+        task_id: req.params.id,
+        user_id: req.user.userId,
+        file_name: req.file.originalname,
+        file_path: req.file.path.replace(/\\/g, '/'),
+        file_type: req.file.mimetype,
+        file_size: req.file.size,
+      },
+      include: { user: true },
+    });
+
+    const uploaderUser = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    const uploaderName = uploaderUser?.name || 'Someone';
+
+    const io = req.app.get('io');
+    const admins = await prisma.user.findMany({ where: { role: 'admin', is_active: true } });
+    const recipientIds = new Set([
+      task.created_by,
+      ...task.assignments.map(a => a.user_id),
+      ...admins.map(admin => admin.id),
+    ]);
+    recipientIds.delete(req.user.userId);
+
+    for (const userId of recipientIds) {
+      await createAndSendNotification(
+        io,
+        userId,
+        'comment',
+        `<strong>${uploaderName}</strong> attached a file to <strong>"${task.title}"</strong>: <em>${attachment.file_name}</em>`
+      );
+    }
+
+    const updatedTask = await prisma.task.findUnique({
+      where: { id: req.params.id },
+      include: { assignments: { include: { user: true } } },
+    });
+    broadcastTaskUpdated(io, updatedTask);
+
+    res.status(201).json(attachment);
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ errorCode: 'SERVER_ERROR', message: error.message });
+  }
+};
+
+// GET /api/tasks/:id/attachments - Get attachments
+export const getAttachments = async (req, res) => {
+  try {
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id },
+      include: { assignments: true },
+    });
+
+    if (!task) {
+      return res.status(404).json({
+        errorCode: 'NOT_FOUND',
+        message: 'Task not found',
+      });
+    }
+
+    // Role check: Collaborators can only view attachments on tasks they are assigned to
+    if (req.user.role === 'collaborator') {
+      const isAssigned = task.assignments.some(a => a.user_id === req.user.userId);
+      if (!isAssigned) {
+        return res.status(403).json({
+          errorCode: 'FORBIDDEN',
+          message: 'You can only view attachments of tasks assigned to you',
+        });
+      }
+    }
+
+    const attachments = await prisma.attachment.findMany({
+      where: { task_id: req.params.id },
+      include: { user: true },
+      orderBy: { created_at: 'asc' },
+    });
+
+    res.json(attachments);
+  } catch (error) {
+    res.status(500).json({ errorCode: 'SERVER_ERROR', message: error.message });
+  }
+};
+
+// DELETE /api/tasks/:id/attachments/:attachmentId - Delete attachment
+export const deleteAttachment = async (req, res) => {
+  try {
+    const { attachmentId } = req.params;
+
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: attachmentId },
+    });
+
+    if (!attachment) {
+      return res.status(404).json({
+        errorCode: 'NOT_FOUND',
+        message: 'Attachment not found',
+      });
+    }
+
+    // Role check: Collaborators can only delete their own attachments
+    if (req.user.role === 'collaborator' && attachment.user_id !== req.user.userId) {
+      return res.status(403).json({
+        errorCode: 'FORBIDDEN',
+        message: 'You can only delete your own attachments',
+      });
+    }
+
+    // Delete file from disk
+    if (fs.existsSync(attachment.file_path)) {
+      fs.unlinkSync(attachment.file_path);
+    }
+
+    // Delete from database
+    await prisma.attachment.delete({
+      where: { id: attachmentId },
+    });
+
+    const io = req.app.get('io');
+    const updatedTask = await prisma.task.findUnique({
+      where: { id: req.params.id },
+      include: { assignments: { include: { user: true } } },
+    });
+    broadcastTaskUpdated(io, updatedTask);
+
+    res.json({ message: 'Attachment deleted successfully' });
   } catch (error) {
     res.status(500).json({ errorCode: 'SERVER_ERROR', message: error.message });
   }

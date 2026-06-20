@@ -50,6 +50,11 @@ export const taskService = {
   update: (id, data) => api.put(`/tasks/${id}`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
   updateStatus: (id, status) => api.patch(`/tasks/${id}/status`, { status }),
+  getAttachments: (taskId) => api.get(`/tasks/${taskId}/attachments`),
+  uploadAttachment: (taskId, formData) => api.post(`/tasks/${taskId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteAttachment: (taskId, attachmentId) => api.delete(`/tasks/${taskId}/attachments/${attachmentId}`),
 };
 
 /* ========== USERS ========== */
