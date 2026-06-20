@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { hashPassword } from '../utils/hashHelper.js';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
+import { sendWelcomeEmail } from '../utils/emailHelper.js';
 
 // GET /api/users - Get all users
 export const getUsers = async (req, res) => {
@@ -85,10 +86,16 @@ export const createUser = async (req, res) => {
       },
     });
 
+    try {
+      await sendWelcomeEmail(user.email, user.name, tempPassword);
+    } catch (emailErr) {
+      console.error('Failed to send onboarding welcome email:', emailErr);
+    }
+
     res.status(201).json({
       user,
       temp_password: tempPassword,
-      message: 'User created. Share the temp password with them.',
+      message: 'User created successfully. Welcome email dispatched.',
     });
   } catch (error) {
     res.status(500).json({ errorCode: 'SERVER_ERROR', message: error.message });
