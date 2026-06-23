@@ -4,6 +4,8 @@ import { ProtectedRoute, AdminRoute, ManagerRoute } from './ProtectedRoute';
 
 import LoginPage from '../pages/Login/LoginPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import ProjectsPage from '../pages/Projects/ProjectsPage';
+import ProjectFormPage from '../pages/ProjectForm/ProjectFormPage';
 import TasksPage from '../pages/Tasks/TasksPage';
 import TaskFormPage from '../pages/TaskForm/TaskFormPage';
 import UserManagementPage from '../pages/UserManagement/UserManagementPage';
@@ -38,6 +40,9 @@ export default function AppRoutes() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/create" element={<ProjectFormPage />} />
+        <Route path="/projects/edit/:id" element={<ProjectFormPage />} />
         <Route path="/tasks" element={<TasksPage />} />
         <Route path="/tasks/create" element={<TaskFormPage />} />
         <Route path="/tasks/edit/:id" element={<TaskFormPage />} />

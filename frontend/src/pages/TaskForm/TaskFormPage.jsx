@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api, { taskService, userService } from '../../services/api';
+import api, { taskService, userService, projectService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import ErrorAlert from '../../components/ErrorAlert/ErrorAlert';
 import styles from './TaskFormPage.module.css';
@@ -39,6 +39,7 @@ export default function TaskFormPage() {
   const isEditing = !!id;
 
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -46,6 +47,7 @@ export default function TaskFormPage() {
     status: 'To Do',
     dueDate: '',
     assigneeId: '',
+    projectId: '',
   });
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
@@ -65,6 +67,13 @@ export default function TaskFormPage() {
         const usersRes = await userService.getAll();
         setUsers(usersRes.data || []);
 
+        try {
+          const projectsRes = await projectService.getAll();
+          setProjects(projectsRes.data || []);
+        } catch (projErr) {
+          console.error('Failed to load projects:', projErr);
+        }
+
         if (isEditing) {
           const taskRes = await taskService.getById(id);
           const task = taskRes.data;
@@ -75,6 +84,7 @@ export default function TaskFormPage() {
             status: STATUS_MAP_FROM_DB[task.status] || 'To Do',
             dueDate: task.due_date ? task.due_date.substring(0, 10) : '',
             assigneeId: task.assignments?.[0]?.user_id || '',
+            projectId: task.project_id || '',
           });
 
           try {
@@ -123,7 +133,8 @@ export default function TaskFormPage() {
             priority: PRIORITY_MAP_TO_DB[form.priority],
             status: STATUS_MAP_TO_DB[form.status],
             due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
-            assignee_ids: form.assigneeId ? [form.assigneeId] : []
+            assignee_ids: form.assigneeId ? [form.assigneeId] : [],
+            project_id: form.projectId || null
           };
           await taskService.update(id, payload);
           await taskService.updateStatus(id, STATUS_MAP_TO_DB[form.status]);
@@ -138,7 +149,8 @@ export default function TaskFormPage() {
           priority: PRIORITY_MAP_TO_DB[form.priority],
           status: STATUS_MAP_TO_DB[form.status],
           due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
-          assignee_ids: form.assigneeId ? [form.assigneeId] : []
+          assignee_ids: form.assigneeId ? [form.assigneeId] : [],
+          project_id: form.projectId || null
         };
         await taskService.create(payload);
       }
@@ -302,6 +314,22 @@ export default function TaskFormPage() {
               </select>
               {errors.assigneeId && <span className={styles.fieldError}>{errors.assigneeId}</span>}
             </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label} htmlFor="task-project">Project</label>
+            <select
+              id="task-project"
+              className={styles.select}
+              value={form.projectId}
+              onChange={(e) => handleChange('projectId', e.target.value)}
+              disabled={isCollaborator}
+            >
+              <option value="">No Project (Standalone Task)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.actions}>

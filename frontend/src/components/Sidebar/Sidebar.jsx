@@ -5,6 +5,7 @@ import styles from './Sidebar.module.css';
 const NAV_ITEMS = [
   { to: '/dashboard', icon: '📊', label: 'Dashboard' },
   { to: '/projects', icon: '📁', label: 'Projects', allowedRoles: ['admin', 'project_manager'] },
+
   { to: '/tasks', icon: '📋', label: 'Tasks' },
   { to: '/tasks/create', icon: '➕', label: 'Create Task', allowedRoles: ['admin', 'project_manager'] },
   { to: '/users', icon: '👥', label: 'User Management', allowedRoles: ['admin'] },
