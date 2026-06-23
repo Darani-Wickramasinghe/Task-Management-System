@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import { ProtectedRoute, AdminRoute } from './ProtectedRoute';
+import { ProtectedRoute, AdminRoute, ManagerRoute } from './ProtectedRoute';
 
 import LoginPage from '../pages/Login/LoginPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
@@ -10,6 +10,8 @@ import UserManagementPage from '../pages/UserManagement/UserManagementPage';
 import NotificationsPage from '../pages/Notifications/NotificationsPage';
 import SettingsPage from '../pages/Settings/SettingsPage';
 import ResetPasswordPage from '../pages/ResetPassword/ResetPasswordPage';
+import ProjectsPage from '../pages/Projects/ProjectsPage';
+import ProjectFormPage from '../pages/ProjectForm/ProjectFormPage';
 
 export default function AppRoutes() {
   return (
@@ -49,6 +51,32 @@ export default function AppRoutes() {
             <AdminRoute>
               <UserManagementPage />
             </AdminRoute>
+          }
+        />
+
+        {/* Manager & Admin only */}
+        <Route
+          path="/projects"
+          element={
+            <ManagerRoute>
+              <ProjectsPage />
+            </ManagerRoute>
+          }
+        />
+        <Route
+          path="/projects/create"
+          element={
+            <ManagerRoute>
+              <ProjectFormPage />
+            </ManagerRoute>
+          }
+        />
+        <Route
+          path="/projects/edit/:id"
+          element={
+            <ManagerRoute>
+              <ProjectFormPage />
+            </ManagerRoute>
           }
         />
       </Route>
