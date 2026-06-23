@@ -19,6 +19,7 @@ model User {
   updated_at          DateTime @updatedAt
 
   tasks_created Task[]           @relation("CreatedBy")
+  projects_created Project[]     @relation("ProjectCreator")
   assignments   TaskAssignment[]
   comments      Comment[]
   attachments   Attachment[]
@@ -28,6 +29,18 @@ enum Role {
   admin
   project_manager
   collaborator
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  created_by  String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  creator     User     @relation("ProjectCreator", fields: [created_by], references: [id])
+  tasks       Task[]
 }
 
 model Task {
@@ -40,8 +53,10 @@ model Task {
   created_by  String
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
+  project_id  String?
 
   creator     User             @relation("CreatedBy", fields: [created_by], references: [id])
+  project     Project?         @relation(fields: [project_id], references: [id], onDelete: Cascade)
   assignments TaskAssignment[]
   comments    Comment[]
   attachments Attachment[]

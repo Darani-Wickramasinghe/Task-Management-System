@@ -37,3 +37,21 @@ export function AdminRoute({ children }) {
 
   return children;
 }
+
+export function ManagerRoute({ children }) {
+  const { isAuthenticated, isAdmin, isProjectManager, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner fullPage label="Loading..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!isAdmin && !isProjectManager) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}

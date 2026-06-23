@@ -38,11 +38,15 @@ import authRoutes from './src/routes/authRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import taskRoutes from './src/routes/taskRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
+import projectRoutes from './src/routes/projectRoutes.js';
+import dashboardRoutes from './src/routes/dashboardRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 
 app.get('/', (req, res) => {
