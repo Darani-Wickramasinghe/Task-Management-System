@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { projectService } from '../../services/api';
+import { projectService, userService } from '../../services/api';
 import styles from './ProjectFormPage.module.css';
 
 export default function ProjectFormPage() {
@@ -8,28 +8,36 @@ export default function ProjectFormPage() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', manager_id: '' });
+  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [initialLoading, setInitialLoading] = useState(isEdit);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
-    if (isEdit) {
-      const fetchProject = async () => {
-        try {
+    const loadData = async () => {
+      try {
+        const usersRes = await userService.getAll();
+        const eligibleManagers = (usersRes.data || []).filter(
+          (u) => u.role === 'admin' || u.role === 'project_manager'
+        );
+        setManagers(eligibleManagers);
+
+        if (isEdit) {
           const res = await projectService.getById(id);
           setFormData({
             name: res.data.name,
             description: res.data.description || '',
+            manager_id: res.data.manager_id || '',
           });
-        } catch (err) {
-          setError(err.response?.data?.message || err.message || 'Failed to fetch project');
-        } finally {
-          setInitialLoading(false);
         }
-      };
-      fetchProject();
-    }
+      } catch (err) {
+        setError(err.response?.data?.message || err.message || 'Failed to load data');
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+    loadData();
   }, [id, isEdit]);
 
   const handleSubmit = async (e) => {
@@ -77,6 +85,24 @@ export default function ProjectFormPage() {
               required
               placeholder="e.g., Q3 Marketing Campaign"
             />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="manager_id">Assign Manager <span className={styles.required}>*</span></label>
+            <select
+              id="manager_id"
+              value={formData.manager_id}
+              onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
+              required
+              className={styles.select}
+            >
+              <option value="">Select a Manager</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name} ({m.role})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.formGroup}>

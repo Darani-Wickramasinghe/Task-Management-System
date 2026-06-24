@@ -75,13 +75,6 @@ export const notificationService = {
   markAllAsRead: () => api.patch('/notifications/read-all'),
 };
 
-/* ========== SETTINGS ========== */
-export const settingsService = {
-  getProfile: () => api.get('/settings/profile'),
-  updateProfile: (data) => api.put('/settings/profile', data),
-  changePassword: (data) => api.put('/settings/password', data),
-};
-
 /* ========== PROJECTS ========== */
 export const projectService = {
   getAll: (params) => api.get('/projects', { params }),
@@ -90,6 +83,14 @@ export const projectService = {
   update: (id, data) => api.put(`/projects/${id}`, data),
   delete: (id) => api.delete(`/projects/${id}`),
 };
+
+/* ========== SETTINGS ========== */
+export const settingsService = {
+  getProfile: () => api.get('/settings/profile'),
+  updateProfile: (data) => api.put('/settings/profile', data),
+  changePassword: (data) => api.put('/settings/password', data),
+};
+
 
 /* ========== DASHBOARD ========== */
 export const dashboardService = {

@@ -2,17 +2,23 @@ import fs from 'fs';
 import { prisma } from '../config/prisma.js';
 import { createAndSendNotification } from '../utils/notificationHelper.js';
 import { broadcastTaskCreated, broadcastTaskUpdated, broadcastTaskDeleted } from '../sockets/emitEvents.js';
+import { 
+  sendTaskAssignmentEmail, 
+  sendTaskStatusChangeEmail, 
+  sendCommentNotificationEmail 
+} from '../utils/emailHelper.js';
 
 
 
 // GET /api/tasks - Get all tasks
 export const getTasks = async (req, res) => {
   try {
-    const { status, priority } = req.query;
+    const { status, priority, project_id } = req.query;
     const tasks = await prisma.task.findMany({
       where: {
         ...(status && { status }),
         ...(priority && { priority }),
+        ...(project_id && { project_id }),
       },
       include: { 
         assignments: { include: { user: true } }, 
@@ -68,7 +74,7 @@ export const createTask = async (req, res) => {
           ? { create: assignee_ids.map(uid => ({ user_id: uid })) }
           : undefined,
       },
-      include: { assignments: { include: { user: true } } },
+      include: { assignments: { include: { user: true } }, project: true },
     });
 
     const io = req.app.get('io');
@@ -80,6 +86,24 @@ export const createTask = async (req, res) => {
           'assigned',
           `<strong>${creatorName}</strong> assigned you to <strong>"${task.title}"</strong>`
         );
+      }
+
+      // Send real email notifications to assignees
+      if (task.assignments && task.assignments.length > 0) {
+        for (const assignment of task.assignments) {
+          if (assignment.user) {
+            sendTaskAssignmentEmail({
+              email: assignment.user.email,
+              name: assignment.user.name,
+              taskTitle: task.title,
+              taskDescription: task.description,
+              projectName: task.project?.name || 'Standalone Task',
+              dueDate: task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date',
+              priority: task.priority,
+              taskId: task.id
+            }).catch(err => console.error('Failed to send task assignment email:', err));
+          }
+        }
       }
     }
 
@@ -141,8 +165,9 @@ export const updateTask = async (req, res) => {
         description, 
         priority, 
         due_date: due_date ? new Date(due_date) : undefined,
-        ...(project_id && { project_id })
+        project_id: project_id !== undefined ? (project_id || null) : undefined
       },
+      include: { project: true }
     });
 
     const io = req.app.get('io');
@@ -234,6 +259,27 @@ export const updateTaskStatus = async (req, res) => {
       );
     }
 
+    // Send task status change emails to recipients
+    const updaterUser = await prisma.user.findUnique({ where: { id: req.user.userId } });
+    const updaterName = updaterUser?.name || 'Someone';
+
+    if (recipientIds.size > 0) {
+      const recipients = await prisma.user.findMany({
+        where: { id: { in: Array.from(recipientIds) } }
+      });
+      for (const rec of recipients) {
+        sendTaskStatusChangeEmail({
+          email: rec.email,
+          name: rec.name,
+          taskTitle: task.title,
+          oldStatus: oldTask.status,
+          newStatus: task.status,
+          changedBy: updaterName,
+          taskId: task.id
+        }).catch(err => console.error('Failed to send status update email:', err));
+      }
+    }
+
     broadcastTaskUpdated(io, task);
 
     res.json(task);
@@ -266,6 +312,11 @@ export const assignTask = async (req, res) => {
       });
     }
 
+    // Clear existing assignments first to replace assignee
+    await prisma.taskAssignment.deleteMany({
+      where: { task_id: req.params.id },
+    });
+
     await prisma.taskAssignment.createMany({
       data: user_ids.map(uid => ({ 
         task_id: req.params.id, 
@@ -293,8 +344,26 @@ export const assignTask = async (req, res) => {
 
     const updatedTask = await prisma.task.findUnique({
       where: { id: req.params.id },
-      include: { assignments: { include: { user: true } } },
+      include: { assignments: { include: { user: true } }, project: true },
     });
+
+    // Send task assignment emails to the assignees
+    if (updatedTask.assignments && updatedTask.assignments.length > 0) {
+      for (const assignment of updatedTask.assignments) {
+        if (assignment.user) {
+          sendTaskAssignmentEmail({
+            email: assignment.user.email,
+            name: assignment.user.name,
+            taskTitle: updatedTask.title,
+            taskDescription: updatedTask.description,
+            projectName: updatedTask.project?.name || 'Standalone Task',
+            dueDate: updatedTask.due_date ? new Date(updatedTask.due_date).toLocaleDateString() : 'No due date',
+            priority: updatedTask.priority,
+            taskId: updatedTask.id
+          }).catch(err => console.error('Failed to send task assignment email:', err));
+        }
+      }
+    }
 
     broadcastTaskUpdated(io, updatedTask);
 
@@ -368,6 +437,23 @@ export const addComment = async (req, res) => {
         'comment',
         `<strong>${commenterName}</strong> commented on <strong>"${task.title}"</strong>: "${content.substring(0, 30)}${content.length > 30 ? '...' : ''}"`
       );
+    }
+
+    // Send comment notification emails to recipients
+    if (recipientIds.size > 0) {
+      const recipients = await prisma.user.findMany({
+        where: { id: { in: Array.from(recipientIds) } }
+      });
+      for (const rec of recipients) {
+        sendCommentNotificationEmail({
+          email: rec.email,
+          name: rec.name,
+          taskTitle: task.title,
+          commenterName,
+          commentContent: content,
+          taskId: task.id
+        }).catch(err => console.error('Failed to send comment notification email:', err));
+      }
     }
 
     const updatedTask = await prisma.task.findUnique({

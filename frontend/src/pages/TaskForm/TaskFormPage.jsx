@@ -39,6 +39,7 @@ export default function TaskFormPage() {
   const isEditing = !!id;
 
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -67,8 +68,12 @@ export default function TaskFormPage() {
         const usersRes = await userService.getAll();
         setUsers(usersRes.data || []);
 
-        const projectsRes = await projectService.getAll();
-        setProjects(projectsRes.data || []);
+        try {
+          const projectsRes = await projectService.getAll();
+          setProjects(projectsRes.data || []);
+        } catch (projErr) {
+          console.error('Failed to load projects:', projErr);
+        }
 
         if (isEditing) {
           const taskRes = await taskService.getById(id);
@@ -131,7 +136,7 @@ export default function TaskFormPage() {
             status: STATUS_MAP_TO_DB[form.status],
             due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
             assignee_ids: form.assigneeId ? [form.assigneeId] : [],
-            project_id: form.projectId
+            project_id: form.projectId || null
           };
           await taskService.update(id, payload);
           await taskService.updateStatus(id, STATUS_MAP_TO_DB[form.status]);
@@ -147,7 +152,7 @@ export default function TaskFormPage() {
           status: STATUS_MAP_TO_DB[form.status],
           due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
           assignee_ids: form.assigneeId ? [form.assigneeId] : [],
-          project_id: form.projectId
+          project_id: form.projectId || null
         };
         await taskService.create(payload);
       }
@@ -330,6 +335,22 @@ export default function TaskFormPage() {
               </select>
               {errors.projectId && <span className={styles.fieldError}>{errors.projectId}</span>}
             </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label} htmlFor="task-project">Project</label>
+            <select
+              id="task-project"
+              className={styles.select}
+              value={form.projectId}
+              onChange={(e) => handleChange('projectId', e.target.value)}
+              disabled={isCollaborator}
+            >
+              <option value="">No Project (Standalone Task)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.actions}>

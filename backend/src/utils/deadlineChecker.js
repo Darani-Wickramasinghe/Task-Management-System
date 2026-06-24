@@ -1,5 +1,6 @@
 import { prisma } from '../config/prisma.js';
 import { createAndSendNotification } from './notificationHelper.js';
+import { sendDeadlineReminderEmail } from './emailHelper.js';
 
 export function startDeadlineChecker(io) {
   // Check immediately on start
@@ -27,7 +28,11 @@ async function checkDeadlines(io) {
         },
       },
       include: {
-        assignments: true,
+        assignments: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
@@ -61,6 +66,18 @@ async function checkDeadlines(io) {
 
         if (!existingNotif) {
           await createAndSendNotification(io, userId, 'deadline', message);
+
+          // Send deadline warning email
+          if (assignment.user) {
+            sendDeadlineReminderEmail({
+              email: assignment.user.email,
+              name: assignment.user.name,
+              taskTitle: task.title,
+              daysRemaining: Math.ceil(daysDiff),
+              priority: task.priority,
+              taskId: task.id
+            }).catch(err => console.error('Failed to send deadline reminder email:', err));
+          }
         }
       }
     }

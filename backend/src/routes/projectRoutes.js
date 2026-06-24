@@ -11,13 +11,14 @@ import {
 
 const router = express.Router();
 
+// All project routes require authentication
 router.use(authenticate);
 
-// All users can view projects (logic handles returning allowed projects)
+// View projects (accessible to all authenticated users)
 router.get('/', getProjects);
 router.get('/:id', getProjectById);
 
-// Only PMs can modify projects
+// Only Project Managers can manage projects
 router.post('/', authorize('project_manager'), createProject);
 router.put('/:id', authorize('project_manager'), updateProject);
 router.delete('/:id', authorize('project_manager'), deleteProject);
