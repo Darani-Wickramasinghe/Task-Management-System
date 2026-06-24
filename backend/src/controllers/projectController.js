@@ -12,7 +12,7 @@ export const getProjects = async (req, res) => {
       });
     } else if (req.user.role === 'project_manager') {
       projects = await prisma.project.findMany({
-        where: { created_by: req.user.userId },
+        where: { manager_id: req.user.userId },
         include: { creator: true, _count: { select: { tasks: true } } },
         orderBy: { created_at: 'desc' },
       });
@@ -50,7 +50,7 @@ export const getProjectById = async (req, res) => {
     }
 
     // Role-based access control
-    if (req.user.role === 'project_manager' && project.created_by !== req.user.userId) {
+    if (req.user.role === 'project_manager' && project.manager_id !== req.user.userId) {
       return res.status(403).json({ errorCode: 'FORBIDDEN', message: 'You do not have access to this project' });
     }
 
@@ -82,7 +82,7 @@ export const createProject = async (req, res) => {
       data: {
         name,
         description,
-        created_by: req.user.userId,
+        manager_id: req.user.userId,
       },
       include: { creator: true },
     });
@@ -103,7 +103,7 @@ export const updateProject = async (req, res) => {
       return res.status(404).json({ errorCode: 'NOT_FOUND', message: 'Project not found' });
     }
 
-    if (req.user.role === 'project_manager' && existingProject.created_by !== req.user.userId) {
+    if (req.user.role === 'project_manager' && existingProject.manager_id !== req.user.userId) {
       return res.status(403).json({ errorCode: 'FORBIDDEN', message: 'You do not have permission to edit this project' });
     }
 
@@ -131,7 +131,7 @@ export const deleteProject = async (req, res) => {
       return res.status(404).json({ errorCode: 'NOT_FOUND', message: 'Project not found' });
     }
 
-    if (req.user.role === 'project_manager' && existingProject.created_by !== req.user.userId) {
+    if (req.user.role === 'project_manager' && existingProject.manager_id !== req.user.userId) {
       return res.status(403).json({ errorCode: 'FORBIDDEN', message: 'You do not have permission to delete this project' });
     }
 

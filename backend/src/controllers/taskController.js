@@ -16,7 +16,8 @@ export const getTasks = async (req, res) => {
       },
       include: { 
         assignments: { include: { user: true } }, 
-        creator: true 
+        creator: true,
+        project: { select: { id: true, name: true } }
       },
       orderBy: { created_at: 'desc' },
     });
@@ -29,12 +30,19 @@ export const getTasks = async (req, res) => {
 // POST /api/tasks - Create a task
 export const createTask = async (req, res) => {
   try {
-    const { title, description, priority, due_date, assignee_ids } = req.body;
+    const { title, description, priority, due_date, assignee_ids, project_id } = req.body;
     
     if (!title) {
       return res.status(400).json({ 
         errorCode: 'VALIDATION_ERROR', 
         message: 'Title is required' 
+      });
+    }
+
+    if (!project_id) {
+      return res.status(400).json({ 
+        errorCode: 'VALIDATION_ERROR', 
+        message: 'Project selection is required' 
       });
     }
 
@@ -55,6 +63,7 @@ export const createTask = async (req, res) => {
         priority,
         due_date: due_date ? new Date(due_date) : null,
         created_by: req.user.userId,
+        project_id,
         assignments: assignee_ids?.length
           ? { create: assignee_ids.map(uid => ({ user_id: uid })) }
           : undefined,
@@ -103,6 +112,7 @@ export const getTaskById = async (req, res) => {
       include: { 
         assignments: { include: { user: true } }, 
         comments: { include: { user: true } }, 
+        project: { select: { id: true, name: true } }
       },
     });
 
@@ -122,7 +132,7 @@ export const getTaskById = async (req, res) => {
 // PUT /api/tasks/:id - Update task
 export const updateTask = async (req, res) => {
   try {
-    const { title, description, priority, due_date } = req.body;
+    const { title, description, priority, due_date, project_id } = req.body;
 
     const task = await prisma.task.update({
       where: { id: req.params.id },
@@ -130,7 +140,8 @@ export const updateTask = async (req, res) => {
         title, 
         description, 
         priority, 
-        due_date: due_date ? new Date(due_date) : undefined 
+        due_date: due_date ? new Date(due_date) : undefined,
+        ...(project_id && { project_id })
       },
     });
 

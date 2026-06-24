@@ -17,9 +17,9 @@ router.use(authenticate);
 router.get('/', getProjects);
 router.get('/:id', getProjectById);
 
-// Only admins and PMs can modify projects
-router.post('/', authorize('admin', 'project_manager'), createProject);
-router.put('/:id', authorize('admin', 'project_manager'), updateProject);
-router.delete('/:id', authorize('admin', 'project_manager'), deleteProject);
+// Only PMs can modify projects
+router.post('/', authorize('project_manager'), createProject);
+router.put('/:id', authorize('project_manager'), updateProject);
+router.delete('/:id', authorize('project_manager'), deleteProject);
 
 export default router;
