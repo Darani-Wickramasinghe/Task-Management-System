@@ -52,6 +52,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
+
 app.get('/', (req, res) => {
   res.json({ message: 'TMS Backend is running!' });
 });

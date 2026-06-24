@@ -67,7 +67,7 @@ export default function ProjectsPage() {
               <tr>
                 <th>Name</th>
                 <th>Description</th>
-                <th>Created By</th>
+                <th>Manager</th>
                 <th>Tasks Count</th>
                 <th>Created At</th>
                 <th>Actions</th>
@@ -78,8 +78,8 @@ export default function ProjectsPage() {
                 <tr key={project.id}>
                   <td style={{ fontWeight: 600 }}>{project.name}</td>
                   <td>{project.description || 'No description'}</td>
-                  <td>{project.creator?.name || 'Unknown'}</td>
-                  <td>{project._count?.tasks || 0}</td>
+                  <td>{project.manager?.name || 'Unknown'}</td>
+                  <td>{project.totalTasks || 0}</td>
                   <td style={{ color: 'var(--text-secondary)' }}>
                     {new Date(project.created_at).toLocaleDateString()}
                   </td>

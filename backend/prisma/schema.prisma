@@ -18,11 +18,12 @@ model User {
   must_reset_password Boolean          @default(true)
   created_at          DateTime         @default(now())
   updated_at          DateTime         @updatedAt
-  attachments         Attachment[]
-  comments            Comment[]
-  projects_created    Project[]        @relation("ProjectCreator")
-  tasks_created       Task[]           @relation("CreatedBy")
-  assignments         TaskAssignment[]
+
+  attachments      Attachment[]
+  comments         Comment[]
+  projects_created Project[]        @relation("ProjectCreator")
+  tasks_created    Task[]           @relation("CreatedBy")
+  assignments      TaskAssignment[]
 }
 
 model Project {
@@ -33,8 +34,15 @@ model Project {
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   status      String   @default("active")
-  creator     User     @relation("ProjectCreator", fields: [manager_id], references: [id], map: "Project_created_by_fkey")
-  tasks       Task[]
+
+  creator User @relation(
+    "ProjectCreator",
+    fields: [manager_id],
+    references: [id],
+    map: "Project_created_by_fkey"
+  )
+
+  tasks Task[]
 }
 
 model Task {
@@ -48,6 +56,7 @@ model Task {
   created_at  DateTime         @default(now())
   updated_at  DateTime         @updatedAt
   project_id  String?
+
   attachments Attachment[]
   comments    Comment[]
   creator     User             @relation("CreatedBy", fields: [created_by], references: [id])
@@ -60,8 +69,9 @@ model TaskAssignment {
   task_id     String
   user_id     String
   assigned_at DateTime @default(now())
-  task        Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [user_id], references: [id])
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 }
 
 model Comment {
@@ -70,8 +80,9 @@ model Comment {
   user_id    String
   content    String
   created_at DateTime @default(now())
-  task       Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id])
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 }
 
 model Notification {
@@ -92,8 +103,9 @@ model Attachment {
   file_type  String
   file_size  Int
   created_at DateTime @default(now())
-  task       Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id])
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
 }
 
 enum Role {

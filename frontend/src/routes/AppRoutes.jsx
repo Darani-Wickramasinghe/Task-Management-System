@@ -4,14 +4,14 @@ import { ProtectedRoute, AdminRoute, ManagerRoute, TaskRoute } from './Protected
 
 import LoginPage from '../pages/Login/LoginPage';
 import DashboardPage from '../pages/Dashboard/DashboardPage';
+import ProjectsPage from '../pages/Projects/ProjectsPage';
+import ProjectFormPage from '../pages/ProjectForm/ProjectFormPage';
 import TasksPage from '../pages/Tasks/TasksPage';
 import TaskFormPage from '../pages/TaskForm/TaskFormPage';
 import UserManagementPage from '../pages/UserManagement/UserManagementPage';
 import NotificationsPage from '../pages/Notifications/NotificationsPage';
 import SettingsPage from '../pages/Settings/SettingsPage';
 import ResetPasswordPage from '../pages/ResetPassword/ResetPasswordPage';
-import ProjectsPage from '../pages/Projects/ProjectsPage';
-import ProjectFormPage from '../pages/ProjectForm/ProjectFormPage';
 
 export default function AppRoutes() {
   return (
