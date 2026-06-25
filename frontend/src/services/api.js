@@ -7,7 +7,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000,
 });
 
 // Request interceptor — attach JWT
@@ -40,6 +40,7 @@ export const authService = {
   login: (email, password) => api.post('/auth/login', { email, password }),
   register: (data) => api.post('/auth/register', data),
   me: () => api.get('/auth/me'),
+  resetPassword: (newPassword) => api.post('/auth/reset-password', { new_password: newPassword }),
 };
 
 /* ========== TASKS ========== */
@@ -50,6 +51,11 @@ export const taskService = {
   update: (id, data) => api.put(`/tasks/${id}`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
   updateStatus: (id, status) => api.patch(`/tasks/${id}/status`, { status }),
+  getAttachments: (taskId) => api.get(`/tasks/${taskId}/attachments`),
+  uploadAttachment: (taskId, formData) => api.post(`/tasks/${taskId}/attachments`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteAttachment: (taskId, attachmentId) => api.delete(`/tasks/${taskId}/attachments/${attachmentId}`),
 };
 
 /* ========== USERS ========== */
@@ -69,11 +75,26 @@ export const notificationService = {
   markAllAsRead: () => api.patch('/notifications/read-all'),
 };
 
+/* ========== PROJECTS ========== */
+export const projectService = {
+  getAll: (params) => api.get('/projects', { params }),
+  getById: (id) => api.get(`/projects/${id}`),
+  create: (data) => api.post('/projects', data),
+  update: (id, data) => api.put(`/projects/${id}`, data),
+  delete: (id) => api.delete(`/projects/${id}`),
+};
+
 /* ========== SETTINGS ========== */
 export const settingsService = {
   getProfile: () => api.get('/settings/profile'),
   updateProfile: (data) => api.put('/settings/profile', data),
   changePassword: (data) => api.put('/settings/password', data),
+};
+
+
+/* ========== DASHBOARD ========== */
+export const dashboardService = {
+  getStats: () => api.get('/dashboard/stats'),
 };
 
 export default api;

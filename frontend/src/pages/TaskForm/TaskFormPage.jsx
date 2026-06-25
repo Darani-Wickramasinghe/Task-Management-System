@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import api, { taskService, userService } from '../../services/api';
+import api, { taskService, userService, projectService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import ErrorAlert from '../../components/ErrorAlert/ErrorAlert';
 import styles from './TaskFormPage.module.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const UPLOADS_BASE_URL = API_BASE_URL.replace('/api', '');
 
 const PRIORITY_MAP_TO_DB = {
   'Low': 'low',
@@ -32,10 +35,11 @@ const STATUS_MAP_FROM_DB = {
 export default function TaskFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isCollaborator } = useAuth();
+  const { user, isCollaborator } = useAuth();
   const isEditing = !!id;
 
   const [users, setUsers] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -43,10 +47,15 @@ export default function TaskFormPage() {
     status: 'To Do',
     dueDate: '',
     assigneeId: '',
+    projectId: '',
   });
+  const [projects, setProjects] = useState([]);
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   useEffect(() => {
     if (!isEditing && isCollaborator) {
@@ -59,6 +68,13 @@ export default function TaskFormPage() {
         const usersRes = await userService.getAll();
         setUsers(usersRes.data || []);
 
+        try {
+          const projectsRes = await projectService.getAll();
+          setProjects(projectsRes.data || []);
+        } catch (projErr) {
+          console.error('Failed to load projects:', projErr);
+        }
+
         if (isEditing) {
           const taskRes = await taskService.getById(id);
           const task = taskRes.data;
@@ -69,7 +85,15 @@ export default function TaskFormPage() {
             status: STATUS_MAP_FROM_DB[task.status] || 'To Do',
             dueDate: task.due_date ? task.due_date.substring(0, 10) : '',
             assigneeId: task.assignments?.[0]?.user_id || '',
+            projectId: task.project_id || '',
           });
+
+          try {
+            const attachRes = await taskService.getAttachments(id);
+            setAttachments(attachRes.data || []);
+          } catch (attachErr) {
+            console.error('Failed to load attachments:', attachErr);
+          }
         }
       } catch (err) {
         setApiError(err.response?.data?.message || err.message || 'Failed to load data');
@@ -88,6 +112,7 @@ export default function TaskFormPage() {
     if (!form.title.trim()) errs.title = 'Title is required';
     if (!form.dueDate) errs.dueDate = 'Due date is required';
     if (!form.assigneeId) errs.assigneeId = 'Assignee is required';
+    if (!form.projectId) errs.projectId = 'Project is required';
     return errs;
   };
 
@@ -110,7 +135,8 @@ export default function TaskFormPage() {
             priority: PRIORITY_MAP_TO_DB[form.priority],
             status: STATUS_MAP_TO_DB[form.status],
             due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
-            assignee_ids: form.assigneeId ? [form.assigneeId] : []
+            assignee_ids: form.assigneeId ? [form.assigneeId] : [],
+            project_id: form.projectId || null
           };
           await taskService.update(id, payload);
           await taskService.updateStatus(id, STATUS_MAP_TO_DB[form.status]);
@@ -125,7 +151,8 @@ export default function TaskFormPage() {
           priority: PRIORITY_MAP_TO_DB[form.priority],
           status: STATUS_MAP_TO_DB[form.status],
           due_date: form.dueDate ? new Date(form.dueDate).toISOString() : null,
-          assignee_ids: form.assigneeId ? [form.assigneeId] : []
+          assignee_ids: form.assigneeId ? [form.assigneeId] : [],
+          project_id: form.projectId || null
         };
         await taskService.create(payload);
       }
@@ -135,6 +162,54 @@ export default function TaskFormPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadError('');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await taskService.uploadAttachment(id, formData);
+      setAttachments((prev) => [...prev, res.data]);
+    } catch (err) {
+      setUploadError(err.response?.data?.message || err.message || 'Failed to upload attachment');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!window.confirm('Are you sure you want to delete this attachment?')) return;
+    try {
+      await taskService.deleteAttachment(id, attachmentId);
+      setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Failed to delete attachment');
+    }
+  };
+
+  const getFileIcon = (fileType) => {
+    if (!fileType) return '📁';
+    if (fileType.startsWith('image/')) return '🖼️';
+    if (fileType.includes('pdf')) return '📄';
+    if (fileType.includes('word') || fileType.includes('officedocument')) return '📝';
+    if (fileType.includes('zip') || fileType.includes('rar')) return '📦';
+    return '📎';
+  };
+
+  const formatBytes = (bytes, decimals = 2) => {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
   };
 
   return (
@@ -241,6 +316,41 @@ export default function TaskFormPage() {
               </select>
               {errors.assigneeId && <span className={styles.fieldError}>{errors.assigneeId}</span>}
             </div>
+
+            <div className={styles.fieldGroup}>
+              <label className={styles.label} htmlFor="task-project">
+                Project <span className={styles.required}>*</span>
+              </label>
+              <select
+                id="task-project"
+                className={`${styles.select} ${errors.projectId ? styles.error : ''}`}
+                value={form.projectId}
+                onChange={(e) => handleChange('projectId', e.target.value)}
+                disabled={isCollaborator}
+              >
+                <option value="">Select project...</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {errors.projectId && <span className={styles.fieldError}>{errors.projectId}</span>}
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label} htmlFor="task-project">Project</label>
+            <select
+              id="task-project"
+              className={styles.select}
+              value={form.projectId}
+              onChange={(e) => handleChange('projectId', e.target.value)}
+              disabled={isCollaborator}
+            >
+              <option value="">No Project (Standalone Task)</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.actions}>
@@ -253,6 +363,69 @@ export default function TaskFormPage() {
           </div>
         </form>
       </div>
+
+      {isEditing && (
+        <div className={styles.attachmentsCard}>
+          <h2>Attachments</h2>
+          
+          {uploadError && <div className={styles.uploadError}>{uploadError}</div>}
+          
+          <label className={styles.uploadArea}>
+            <input type="file" onChange={handleUpload} disabled={uploading} />
+            <div className={styles.uploadText}>
+              {uploading ? (
+                <span>Uploading...</span>
+              ) : (
+                <span>📎 Drag & drop or <strong>browse</strong> to upload file (Max 10MB)</span>
+              )}
+            </div>
+          </label>
+
+          {uploading && <div className={styles.uploadingSpinner}>Uploading file, please wait...</div>}
+
+          <div className={styles.attachmentsList}>
+            {attachments.length === 0 ? (
+              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', textAlign: 'center', padding: '16px 0' }}>
+                No attachments uploaded yet.
+              </p>
+            ) : (
+              attachments.map((attach) => (
+                <div key={attach.id} className={styles.attachmentItem}>
+                  <div className={styles.attachmentInfo}>
+                    <span className={styles.fileIcon}>{getFileIcon(attach.file_type)}</span>
+                    <div>
+                      <div className={styles.fileName}>{attach.file_name}</div>
+                      <div className={styles.fileMeta}>
+                        {formatBytes(attach.file_size)} • Uploaded by {attach.user?.name || 'Unknown'} on {new Date(attach.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.attachmentActions}>
+                    <a
+                      href={`${UPLOADS_BASE_URL}/${attach.file_path}`}
+                      className={styles.downloadLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={attach.file_name}
+                    >
+                      Download
+                    </a>
+                    {(!isCollaborator || attach.user_id === user?.id) && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAttachment(attach.id)}
+                        className={styles.deleteAttachmentBtn}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,61 +1,67 @@
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-   url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-  id                  String   @id @default(uuid())
+  id                  String           @id @default(uuid())
   name                String
-  email               String   @unique
+  email               String           @unique
   password_hash       String
-  role                Role     @default(collaborator)
-  is_active           Boolean  @default(true)
-  must_reset_password Boolean  @default(true)
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  role                Role             @default(collaborator)
+  is_active           Boolean          @default(true)
+  must_reset_password Boolean          @default(true)
+  created_at          DateTime         @default(now())
+  updated_at          DateTime         @updatedAt
 
-  tasks_created Task[]           @relation("CreatedBy")
-  assignments   TaskAssignment[]
-  comments      Comment[]
+  attachments      Attachment[]
+  comments         Comment[]
+  projects_created Project[]        @relation("ProjectCreator")
+  tasks_created    Task[]           @relation("CreatedBy")
+  assignments      TaskAssignment[]
 }
 
-enum Role {
-  admin
-  project_manager
-  collaborator
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  manager_id  String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  status      String   @default("active")
+
+  creator User @relation(
+    "ProjectCreator",
+    fields: [manager_id],
+    references: [id],
+    map: "Project_created_by_fkey"
+  )
+
+  tasks Task[]
 }
 
 model Task {
-  id          String    @id @default(uuid())
+  id          String           @id @default(uuid())
   title       String
   description String?
-  status      Status    @default(todo)
-  priority    Priority  @default(medium)
+  status      Status           @default(todo)
+  priority    Priority         @default(medium)
   due_date    DateTime?
   created_by  String
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  project_id  String?
 
-  creator     User             @relation("CreatedBy", fields: [created_by], references: [id])
-  assignments TaskAssignment[]
+  attachments Attachment[]
   comments    Comment[]
-}
-
-enum Status {
-  todo
-  in_progress
-  completed
-}
-
-enum Priority {
-  low
-  medium
-  high
+  creator     User             @relation("CreatedBy", fields: [created_by], references: [id])
+  project     Project?         @relation(fields: [project_id], references: [id], onDelete: Cascade)
+  assignments TaskAssignment[]
 }
 
 model TaskAssignment {
@@ -86,4 +92,36 @@ model Notification {
   message    String
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
+}
+
+model Attachment {
+  id         String   @id @default(uuid())
+  task_id    String
+  user_id    String
+  file_name  String
+  file_path  String
+  file_type  String
+  file_size  Int
+  created_at DateTime @default(now())
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id])
+}
+
+enum Role {
+  admin
+  project_manager
+  collaborator
+}
+
+enum Status {
+  todo
+  in_progress
+  completed
+}
+
+enum Priority {
+  low
+  medium
+  high
 }

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext } from '@hello-pangea/dnd';
-import { taskService } from '../../services/api';
+import { taskService, dashboardService } from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuth } from '../../context/AuthContext';
 import KanbanColumn from '../../components/KanbanColumn/KanbanColumn';
 import styles from './DashboardPage.module.css';
 
 export default function DashboardPage() {
-  const { user, isCollaborator } = useAuth();
+  const { user, isAdmin, isProjectManager, isCollaborator } = useAuth();
   const [columns, setColumns] = useState({
     todo: [],
     inprogress: [],
@@ -15,6 +15,7 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stats, setStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -54,8 +55,11 @@ export default function DashboardPage() {
 
       setColumns(cols);
       setError(null);
+      
+      const statsRes = await dashboardService.getStats();
+      setStats(statsRes.data);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to load dashboard tasks');
+      setError(err.response?.data?.message || err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -70,6 +74,7 @@ export default function DashboardPage() {
   useSocket('task:deleted', fetchDashboardTasks);
 
   const handleDragEnd = async (result) => {
+    if (isAdmin) return; // Admins are read-only
     const { source, destination } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
@@ -154,36 +159,68 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className={styles.stats}>
-        <div className={styles.statCard}>
-          <div className={`${styles.statIcon} ${styles.total}`}>📊</div>
-          <div className={styles.statInfo}>
-            <h3>{totalTasks}</h3>
-            <p>Total Tasks</p>
-          </div>
+      {stats && (
+        <div className={styles.stats}>
+          {isAdmin && (
+            <>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.total}`}>👥</div>
+                <div className={styles.statInfo}><h3>{stats.totalUsers || 0}</h3><p>Total Users</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.progress}`}>✅</div>
+                <div className={styles.statInfo}><h3>{stats.activeUsers || 0}</h3><p>Active Users</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.todo}`}>📁</div>
+                <div className={styles.statInfo}><h3>{stats.totalProjects || 0}</h3><p>Total Projects</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.done}`}>📋</div>
+                <div className={styles.statInfo}><h3>{stats.totalTasks || 0}</h3><p>Total Tasks</p></div>
+              </div>
+            </>
+          )}
+
+          {isProjectManager && (
+            <>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.total}`}>📁</div>
+                <div className={styles.statInfo}><h3>{stats.managedProjects || 0}</h3><p>Managed Projects</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.todo}`}>⏳</div>
+                <div className={styles.statInfo}><h3>{stats.pendingTasks || 0}</h3><p>Pending Tasks</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.done}`}>✅</div>
+                <div className={styles.statInfo}><h3>{stats.completedTasks || 0}</h3><p>Completed Tasks</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.progress}`}>📈</div>
+                <div className={styles.statInfo}><h3>{stats.teamProgress || 0}%</h3><p>Team Progress</p></div>
+              </div>
+            </>
+          )}
+
+          {isCollaborator && (
+            <>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.total}`}>📋</div>
+                <div className={styles.statInfo}><h3>{stats.assignedTasks || 0}</h3><p>Assigned Tasks</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.done}`}>✅</div>
+                <div className={styles.statInfo}><h3>{stats.completedTasks || 0}</h3><p>Completed Tasks</p></div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={`${styles.statIcon} ${styles.todo}`}>⏳</div>
+                <div className={styles.statInfo}><h3>{stats.upcomingDeadlines || 0}</h3><p>Upcoming Deadlines</p></div>
+              </div>
+            </>
+          )}
         </div>
-        <div className={styles.statCard}>
-          <div className={`${styles.statIcon} ${styles.todo}`}>📝</div>
-          <div className={styles.statInfo}>
-            <h3>{columns.todo.length}</h3>
-            <p>To Do</p>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={`${styles.statIcon} ${styles.progress}`}>🔄</div>
-          <div className={styles.statInfo}>
-            <h3>{columns.inprogress.length}</h3>
-            <p>In Progress</p>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={`${styles.statIcon} ${styles.done}`}>✅</div>
-          <div className={styles.statInfo}>
-            <h3>{columns.completed.length}</h3>
-            <p>Completed</p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Kanban Board */}
       {loading ? (
@@ -197,21 +234,27 @@ export default function DashboardPage() {
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className={styles.board}>
-            <KanbanColumn
-              title="To Do"
-              tasks={filterTasks(columns.todo)}
-              droppableId="todo"
-            />
-            <KanbanColumn
-              title="In Progress"
-              tasks={filterTasks(columns.inprogress)}
-              droppableId="inprogress"
-            />
-            <KanbanColumn
-              title="Completed"
-              tasks={filterTasks(columns.completed)}
-              droppableId="completed"
-            />
+            {(statusFilter === 'All' || statusFilter === 'To Do') && (
+              <KanbanColumn
+                title="To Do"
+                tasks={filterTasks(columns.todo)}
+                droppableId="todo"
+              />
+            )}
+            {(statusFilter === 'All' || statusFilter === 'In Progress') && (
+              <KanbanColumn
+                title="In Progress"
+                tasks={filterTasks(columns.inprogress)}
+                droppableId="inprogress"
+              />
+            )}
+            {(statusFilter === 'All' || statusFilter === 'Completed') && (
+              <KanbanColumn
+                title="Completed"
+                tasks={filterTasks(columns.completed)}
+                droppableId="completed"
+              />
+            )}
           </div>
         </DragDropContext>
       )}

@@ -37,3 +37,15 @@ export function broadcastTaskUpdated(io, task) {
 export function broadcastTaskDeleted(io, taskId) {
   io.emit('task:deleted', { id: taskId });
 }
+
+export function broadcastProjectCreated(io, project) {
+  io.emit('project:created', { project });
+}
+
+export function broadcastProjectUpdated(io, project) {
+  io.emit('project:updated', { project });
+}
+
+export function broadcastProjectDeleted(io, projectId) {
+  io.emit('project:deleted', { id: projectId });
+}

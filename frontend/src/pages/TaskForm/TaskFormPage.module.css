@@ -150,3 +150,140 @@
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.attachmentsCard {
+  margin-top: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-card);
+}
+
+.attachmentsCard h2 {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.uploadArea {
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+  background: var(--bg-page);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-bottom: 20px;
+}
+
+.uploadArea:hover {
+  border-color: var(--border-focus);
+  background: var(--bg-input);
+}
+
+.uploadArea input[type="file"] {
+  display: none;
+}
+
+.uploadText {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.uploadText strong {
+  color: var(--color-primary-500);
+}
+
+.attachmentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.attachmentItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-page);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  gap: 16px;
+}
+
+.attachmentInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fileIcon {
+  font-size: 24px;
+}
+
+.fileName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.fileMeta {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.attachmentActions {
+  display: flex;
+  gap: 8px;
+}
+
+.downloadLink {
+  padding: 6px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: white;
+  background: var(--color-primary-500);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+  white-space: nowrap;
+}
+
+.downloadLink:hover {
+  opacity: 0.9;
+}
+
+.deleteAttachmentBtn {
+  padding: 6px 12px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-danger);
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.deleteAttachmentBtn:hover {
+  background: var(--color-danger);
+  color: white;
+}
+
+.uploadError {
+  margin-bottom: 12px;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.uploadingSpinner {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 10px;
+}
