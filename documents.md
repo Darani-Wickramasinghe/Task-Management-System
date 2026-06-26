@@ -216,21 +216,21 @@ This diagram visualizes the physical deployment architecture of the system acros
 
 ```mermaid
 graph TD
-    subgraph Client Environment
+    subgraph ClientEnvironment ["Client Environment"]
         Browser[Web Browser / User]
     end
 
-    subgraph Frontend Hosting (e.g., AWS S3 / Vercel)
+    subgraph FrontendHosting ["Frontend Hosting (e.g., AWS S3 / Vercel)"]
         UI[React.js Single Page Application]
     end
 
-    subgraph Backend Cloud Server (e.g., AWS EC2 / Render)
+    subgraph BackendCloudServer ["Backend Cloud Server (e.g., AWS EC2 / Render)"]
         NodeServer[Node.js + Express.js Server]
         SocketIO[Socket.io Server]
         Multer[Local Volume / uploads dir]
     end
 
-    subgraph Database Hosting (e.g., Supabase / AWS RDS)
+    subgraph DatabaseHosting ["Database Hosting (e.g., Supabase / AWS RDS)"]
         PostgreSQL[(PostgreSQL Database)]
     end
 
